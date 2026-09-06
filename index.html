@@ -4,8 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Radio Live & Record - Đài Sóng</title>
+    
+    <!-- Bổ sung Favicon mới -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📻</text></svg>">
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    
+    <!-- Thư viện JSZip để nén file -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
     <style>
         :root, body.theme-dark {
             --bg-color: #0f172a;
@@ -376,6 +384,18 @@
             gap: 12px;
         }
 
+        .record-toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+            background: var(--card-bg);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
         .record-item-global {
             display: flex;
             align-items: center;
@@ -385,21 +405,38 @@
             border-radius: 8px;
             border: 1px solid var(--border-color);
             font-size: 0.95rem;
+            gap: 15px;
+        }
+
+        .record-info-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .record-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
         }
 
         .record-info {
             display: flex;
-            flex-direction: column;
-            gap: 4px;
+            flex-direction: row;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
         }
 
         .record-channel-tag {
-            font-size: 0.75rem;
+            font-size: 0.85rem;
             color: var(--primary);
             background: var(--bg-color);
-            padding: 2px 8px;
-            border-radius: 4px;
-            width: fit-content;
+            padding: 4px 10px;
+            border-radius: 6px;
+            white-space: nowrap;
+            font-weight: bold;
         }
 
         .record-actions {
@@ -497,6 +534,10 @@
             font-weight: bold;
             width: 100%;
             transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
         }
         
         .btn-primary:hover { filter: brightness(1.1); }
@@ -577,7 +618,7 @@
             flex-wrap: nowrap;
         }
 
-        .player-info {
+        .player-info-bar {
             background: rgba(59, 130, 246, 0.1);
             color: var(--primary);
             padding: 6px 15px;
@@ -720,7 +761,7 @@
         /* Floating Actions Buttons */
         .floating-actions {
             position: fixed;
-            bottom: 80px; /* Adjusted to not overlap with player bar */
+            bottom: 80px;
             right: 30px;
             display: flex;
             flex-direction: column;
@@ -801,26 +842,14 @@
             .search-box input { width: 100%; }
             .grid-container { grid-template-columns: 1fr; }
             
-            .player-bar {
-                flex-direction: column;
-                padding: 15px 10px;
-                gap: 12px;
-            }
-            .player-info {
-                max-width: 100%;
-            }
-            .player-controls { 
-                flex-wrap: wrap; 
-                justify-content: center; 
-                width: 100%; 
-            }
-            #player-seek {
-                width: 100%;
-                flex: none;
-                margin: 5px 0;
-            }
+            .player-bar { flex-direction: column; padding: 15px 10px; gap: 12px; }
+            .player-info-bar { max-width: 100%; }
+            .player-controls { flex-wrap: wrap; justify-content: center; width: 100%; }
+            #player-seek { width: 100%; flex: none; margin: 5px 0; }
             
             .tab-content { padding-bottom: 150px; }
+            .record-info { flex-direction: column; align-items: flex-start; gap: 5px; }
+            .record-toolbar { flex-direction: column; align-items: stretch; }
         }
     </style>
 </head>
@@ -863,6 +892,17 @@
 
     <div class="tab-content" id="tab-recordings">
         <h3 class="section-title"><i class="fas fa-folder-open"></i> Quản Lý Ghi Âm</h3>
+        
+        <div class="record-toolbar">
+            <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-weight:bold; margin-right:auto;">
+                <input type="checkbox" id="select-all-records" onchange="toggleSelectAllRecords()"> Chọn tất cả
+            </label>
+            <button class="btn-primary" style="width:auto; padding:8px 15px;" onclick="downloadSelected()"><i class="fas fa-file-download"></i> Tải đã chọn</button>
+            <button class="btn-primary" style="width:auto; padding:8px 15px; background:var(--danger);" onclick="deleteSelected()"><i class="fas fa-trash-alt"></i> Xóa đã chọn</button>
+            <button class="btn-primary" style="width:auto; padding:8px 15px;" onclick="downloadAll()"><i class="fas fa-download"></i> Tải tất cả</button>
+            <button class="btn-primary" style="width:auto; padding:8px 15px; background:var(--danger);" onclick="deleteAllRecords()"><i class="fas fa-trash"></i> Xóa tất cả</button>
+        </div>
+
         <div class="recordings-container" id="global-recordings-list">
             <div class="empty-list">Chưa có file ghi âm nào.</div>
         </div>
@@ -884,7 +924,8 @@
                     <label>Chức Năng</label>
                     <select class="form-control" id="timer-action">
                         <option value="play">Bật / Tắt Phát Kênh</option>
-                        <option value="record">Bật / Dừng Ghi Âm</option>
+                        <option value="record">Bật / Dừng Ghi Âm (Bật Tiếng)</option>
+                        <option value="record_muted">Bật / Dừng Ghi Âm (Tắt Tiếng)</option>
                     </select>
                 </div>
 
@@ -933,7 +974,7 @@
     </div>
 
     <div id="audio-player-bar" class="player-bar" style="display: none;">
-        <div class="player-info" id="player-title">Tên kênh</div>
+        <div class="player-info-bar" id="player-title">Tên kênh</div>
         <div class="player-controls">
             <button class="btn" id="player-play-btn"><i class="fas fa-play"></i></button>
             <span class="player-time" id="player-time-current">00:00</span>
@@ -945,7 +986,6 @@
         </div>
     </div>
 
-    <!-- Footer -->
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-brand">
@@ -970,13 +1010,11 @@
         </div>
     </footer>
 
-    <!-- Floating Actions Buttons -->
     <div class="floating-actions">
         <button class="fab-btn stop-all" onclick="stopAllChannels()" title="Tắt tất cả kênh đang phát"><i class="fas fa-power-off"></i></button>
         <button class="fab-btn" id="fab-scroll" onclick="toggleScroll()" title="Cuộn trang"><i class="fas fa-arrow-down"></i></button>
     </div>
 
-    <!-- Custom Modals -->
     <div class="custom-alert-overlay" id="custom-alert-overlay">
         <div class="custom-alert-box">
             <div class="custom-alert-title" id="custom-alert-title">Thông báo</div>
@@ -997,7 +1035,8 @@
                     <select id="qt-action" class="form-control" style="width: 100%">
                         <option value="qt_play">Bật kênh</option>
                         <option value="qt_stop">Tắt kênh</option>
-                        <option value="qt_record">Bắt đầu ghi âm</option>
+                        <option value="qt_record">Bắt đầu ghi âm (Bật tiếng)</option>
+                        <option value="qt_record_muted">Bắt đầu ghi âm (Tắt tiếng)</option>
                         <option value="qt_stop_record">Dừng ghi âm</option>
                         <option value="qt_mute">Tắt tiếng</option>
                         <option value="qt_unmute">Bật tiếng</option>
@@ -1016,7 +1055,6 @@
     </div>
 
     <script>
-        // Override System Alert and Confirm with Custom UI
         window.showAlert = (msg) => {
             document.getElementById('custom-alert-overlay').classList.add('show');
             document.getElementById('custom-alert-title').innerText = 'Thông báo';
@@ -1043,7 +1081,6 @@
             };
         };
 
-        // Scroll Actions handling
         window.addEventListener('scroll', () => {
             const scrollBtn = document.getElementById('fab-scroll');
             const icon = scrollBtn.querySelector('i');
@@ -1154,7 +1191,10 @@
             document.getElementById(`tab-${tabName}`).classList.add('active');
             
             if(tabName === 'home') tabBtns[0].classList.add('active');
-            if(tabName === 'recordings') tabBtns[1].classList.add('active');
+            if(tabName === 'recordings') {
+                tabBtns[1].classList.add('active');
+                loadGlobalRecordingsUI();
+            }
             if(tabName === 'timer') {
                 tabBtns[2].classList.add('active');
                 renderTimers();
@@ -1436,7 +1476,7 @@
                     localStorage.removeItem(`temp_rec_${ch.id}`);
                     localStorage.removeItem(`temp_rec_dur_${ch.id}`);
                     localStorage.removeItem(`temp_rec_name_${ch.id}`);
-                    loadGlobalRecordingsUI();
+                    if(document.getElementById('tab-recordings').classList.contains('active')) loadGlobalRecordingsUI();
                     addLog(`Đã lưu bản ghi âm: ${ch.name} (${formatTime(state.recSeconds)})`);
                 };
 
@@ -1480,6 +1520,7 @@
             const records = await getAllRecordsFromDB();
             
             document.getElementById('stat-records').innerText = records.length;
+            document.getElementById('select-all-records').checked = false;
 
             if(records.length === 0) {
                 listEl.innerHTML = '<div class="empty-list">Chưa có file ghi âm nào.</div>';
@@ -1492,9 +1533,12 @@
                 div.className = 'record-item-global';
                 const date = new Date(rec.timestamp).toLocaleString('vi-VN');
                 div.innerHTML = `
-                    <div class="record-info">
-                        <span class="record-channel-tag">${rec.channelName}</span>
-                        <span><i class="fas fa-file-audio"></i> ${date} <b>(${formatTime(rec.duration)})</b></span>
+                    <div class="record-info-wrapper">
+                        <input type="checkbox" class="record-checkbox" value="${rec.id}">
+                        <div class="record-info">
+                            <span class="record-channel-tag">${rec.channelName}</span>
+                            <span style="white-space:nowrap;"><i class="fas fa-file-audio"></i> ${date} <b>(${formatTime(rec.duration)})</b></span>
+                        </div>
                     </div>
                     <div class="record-actions">
                         <button title="Nghe lại" onclick="playRecord('${rec.id}')"><i class="fas fa-play"></i></button>
@@ -1503,6 +1547,82 @@
                     </div>
                 `;
                 listEl.appendChild(div);
+            });
+        };
+
+        // --- CHECKBOX VÀ CHỨC NĂNG HÀNG LOẠT ---
+        window.toggleSelectAllRecords = () => {
+            const isChecked = document.getElementById('select-all-records').checked;
+            document.querySelectorAll('.record-checkbox').forEach(cb => cb.checked = isChecked);
+        };
+
+        const getSelectedRecordIds = () => {
+            return Array.from(document.querySelectorAll('.record-checkbox:checked')).map(cb => Number(cb.value));
+        };
+
+        const generateZipAndDownload = async (recordsToDownload) => {
+            if(recordsToDownload.length === 0) return;
+            const zip = new JSZip();
+            recordsToDownload.forEach(r => {
+                const fileName = `Record_${r.channelId}_${new Date(r.timestamp).getTime()}.mp3`;
+                zip.file(fileName, r.blob);
+            });
+            const content = await zip.generateAsync({type:"blob"});
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `Radio_Recordings_${new Date().getTime()}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+            addLog(`Đã tải xuống ${recordsToDownload.length} file dưới dạng .zip`);
+        };
+
+        window.downloadSelected = async () => {
+            const ids = getSelectedRecordIds();
+            if(ids.length === 0) { showAlert("Vui lòng chọn ít nhất 1 bản ghi!"); return; }
+            
+            const records = await getAllRecordsFromDB();
+            const selectedRecords = records.filter(r => ids.includes(r.id));
+            
+            if(selectedRecords.length === 1) {
+                downloadRecord(selectedRecords[0].id);
+            } else {
+                await generateZipAndDownload(selectedRecords);
+            }
+        };
+
+        window.deleteSelected = () => {
+            const ids = getSelectedRecordIds();
+            if(ids.length === 0) { showAlert("Vui lòng chọn ít nhất 1 bản ghi để xóa!"); return; }
+            showConfirm(`Bạn có chắc muốn xóa ${ids.length} bản ghi đã chọn?`, async () => {
+                for(let id of ids) await deleteRecordFromDB(id);
+                loadGlobalRecordingsUI();
+                addLog(`Đã xóa ${ids.length} bản ghi âm`);
+            });
+        };
+
+        window.downloadAll = async () => {
+            const records = await getAllRecordsFromDB();
+            if(records.length === 0) { showAlert("Không có bản ghi nào để tải!"); return; }
+            if(records.length === 1) {
+                downloadRecord(records[0].id);
+            } else {
+                await generateZipAndDownload(records);
+            }
+        };
+
+        window.deleteAllRecords = async () => {
+            const records = await getAllRecordsFromDB();
+            if(records.length === 0) { showAlert("Không có bản ghi nào để xóa!"); return; }
+            showConfirm("Bạn có chắc chắn muốn XÓA TẤT CẢ bản ghi âm vĩnh viễn?", async () => {
+                const transaction = db.transaction(["recordings"], "readwrite");
+                const store = transaction.objectStore("recordings");
+                store.clear().onsuccess = () => {
+                    loadGlobalRecordingsUI();
+                    addLog("Đã xóa toàn bộ bản ghi âm");
+                };
             });
         };
 
@@ -1574,7 +1694,7 @@
 
             let overlapCount = 0;
             timers.forEach(t => {
-                if(t.enabled && t.id !== id && (t.action === 'play' || t.action === 'record')) {
+                if(t.enabled && t.id !== id && (t.action === 'play' || t.action === 'record' || t.action === 'record_muted')) {
                     if((t.start <= start && t.end > start) || (t.start < end && t.end >= end) || (t.start >= start && t.end <= end)) {
                         overlapCount++;
                     }
@@ -1619,10 +1739,12 @@
             
             const actionMap = {
                 'play': 'Phát/Tắt kênh',
-                'record': 'Ghi âm',
+                'record': 'Ghi âm bật tiếng',
+                'record_muted': 'Ghi âm tắt tiếng',
                 'qt_play': 'Bật kênh (1 lần)',
                 'qt_stop': 'Tắt kênh (1 lần)',
-                'qt_record': 'Bắt đầu ghi âm (1 lần)',
+                'qt_record': 'Bắt đầu ghi âm bật tiếng (1 lần)',
+                'qt_record_muted': 'Bắt đầu ghi âm tắt tiếng (1 lần)',
                 'qt_stop_record': 'Dừng ghi âm (1 lần)',
                 'qt_mute': 'Tắt tiếng (1 lần)',
                 'qt_unmute': 'Bật tiếng (1 lần)'
@@ -1733,15 +1855,28 @@
                     if (t.action === 'record' && !state.isRecording) {
                         if(!state.isPlaying) togglePlay(ch);
                         const success = startRecord(ch);
-                        if(success) addLog(`[Hẹn giờ] Bắt đầu ghi âm: ${ch.name}`);
+                        if(success) addLog(`[Hẹn giờ] Bắt đầu ghi âm bật tiếng: ${ch.name}`);
+                    }
+                    if (t.action === 'record_muted' && !state.isRecording) {
+                        if(!state.isPlaying) togglePlay(ch);
+                        if(!state.isMuted) toggleMute(ch);
+                        const success = startRecord(ch);
+                        if(success) addLog(`[Hẹn giờ] Bắt đầu ghi âm tắt tiếng: ${ch.name}`);
                     }
 
                     if (t.action === 'qt_play' && !state.isPlaying) { togglePlay(ch); addLog(`[Hẹn giờ nhanh] Bắt đầu phát: ${ch.name}`); }
                     if (t.action === 'qt_stop' && state.isPlaying) { togglePlay(ch); addLog(`[Hẹn giờ nhanh] Tắt kênh: ${ch.name}`); }
+                    
                     if (t.action === 'qt_record' && !state.isRecording) { 
                         if(!state.isPlaying) togglePlay(ch);
                         startRecord(ch); 
-                        addLog(`[Hẹn giờ nhanh] Bắt đầu ghi âm: ${ch.name}`);
+                        addLog(`[Hẹn giờ nhanh] Bắt đầu ghi âm bật tiếng: ${ch.name}`);
+                    }
+                    if (t.action === 'qt_record_muted' && !state.isRecording) { 
+                        if(!state.isPlaying) togglePlay(ch);
+                        if(!state.isMuted) toggleMute(ch);
+                        startRecord(ch); 
+                        addLog(`[Hẹn giờ nhanh] Bắt đầu ghi âm tắt tiếng: ${ch.name}`);
                     }
                     if (t.action === 'qt_stop_record' && state.isRecording) { stopRecord(ch); addLog(`[Hẹn giờ nhanh] Dừng ghi âm: ${ch.name}`); }
                     if (t.action === 'qt_mute' && !state.isMuted) { toggleMute(ch); addLog(`[Hẹn giờ nhanh] Tắt tiếng: ${ch.name}`); }
@@ -1758,7 +1893,7 @@
                         togglePlay(ch);
                         addLog(`[Hẹn giờ] Tắt phát: ${ch.name}`);
                     }
-                    if (t.action === 'record' && state.isRecording) {
+                    if ((t.action === 'record' || t.action === 'record_muted') && state.isRecording) {
                         stopRecord(ch);
                         addLog(`[Hẹn giờ] Dừng ghi âm: ${ch.name}`);
                     }
