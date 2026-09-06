@@ -1,1 +1,1863 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Radio Live & Record - Đài Sóng</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        :root, body.theme-dark {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --primary: #3b82f6;
+            --danger: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
 
+        body.theme-light {
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --primary: #2563eb;
+            --danger: #dc2626;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+            --shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        body.theme-neon {
+            --bg-color: #050505;
+            --card-bg: #111111;
+            --primary: #00ffff;
+            --danger: #ff00ff;
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --border-color: #333333;
+            --shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+        }
+
+        body.theme-forest {
+            --bg-color: #0f1a15;
+            --card-bg: #1a2e24;
+            --primary: #10b981;
+            --danger: #ef4444;
+            --text-main: #ecfdf5;
+            --text-muted: #6ee7b7;
+            --border-color: #059669;
+            --shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        body.theme-ocean {
+            --bg-color: #0c1b33;
+            --card-bg: #13294b;
+            --primary: #0ea5e9;
+            --danger: #ef4444;
+            --text-main: #e0f2fe;
+            --text-muted: #7dd3fc;
+            --border-color: #0284c7;
+            --shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        body.theme-sunset {
+            --bg-color: #2a161b;
+            --card-bg: #3d1c24;
+            --primary: #f97316;
+            --danger: #ef4444;
+            --text-main: #fff7ed;
+            --text-muted: #fdba74;
+            --border-color: #c2410c;
+            --shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        *::-webkit-scrollbar {
+            display: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            transition: background-color 0.3s, color 0.3s;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 25px;
+            background: var(--card-bg);
+            box-shadow: var(--shadow);
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header-left h1 {
+            font-size: 1.5rem;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 10px;
+            color: var(--text-muted);
+        }
+
+        .search-box input {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 15px 8px 35px;
+            border-radius: 20px;
+            outline: none;
+            width: 250px;
+            transition: 0.2s;
+        }
+        
+        .search-box input:focus {
+            border-color: var(--primary);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .clock-display {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .theme-selector {
+            background: var(--bg-color);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 5px 10px;
+            border-radius: 5px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .active-count {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-align: center;
+            width: 100%;
+            background: var(--card-bg);
+            padding-bottom: 10px;
+        }
+
+        .tab-nav {
+            display: flex;
+            justify-content: center;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 15px 15px 15px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            flex-grow: 1;
+            width: 100%;
+            padding-bottom: 120px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .section-title {
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            color: var(--primary);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .channel-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: transform 0.2s, border-color 0.2s;
+            border: 1px solid var(--border-color);
+        }
+
+        .channel-card:hover {
+            border-color: var(--primary);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .channel-icon {
+            font-size: 22px;
+            color: var(--primary);
+            width: 38px;
+            height: 38px;
+            background: var(--bg-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .channel-name {
+            font-size: 1rem;
+            font-weight: 600;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn {
+            background: none;
+            border: none;
+            color: var(--text-main);
+            font-size: 1.1rem;
+            cursor: pointer;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+
+        .btn:hover { filter: brightness(1.2); }
+        .btn.active-play { background: var(--primary); color: #fff; }
+        .btn.active-record { background: var(--danger); color: #fff; animation: pulse 1.5s infinite; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        input[type=range] {
+            flex: 1;
+            -webkit-appearance: none;
+            background: transparent;
+            height: 5px;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 5px;
+            background: var(--border-color);
+            border-radius: 5px;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 14px;
+            width: 14px;
+            border-radius: 50%;
+            background: var(--primary);
+            margin-top: -4px;
+            cursor: pointer;
+        }
+
+        .record-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-color);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .record-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: bold;
+        }
+
+        .record-btn:hover:not(:disabled) { color: var(--danger); }
+        .record-btn.recording { color: var(--danger); }
+        .record-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .recordings-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .record-item-global {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--card-bg);
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            font-size: 0.95rem;
+        }
+
+        .record-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .record-channel-tag {
+            font-size: 0.75rem;
+            color: var(--primary);
+            background: var(--bg-color);
+            padding: 2px 8px;
+            border-radius: 4px;
+            width: fit-content;
+        }
+
+        .record-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .record-actions button {
+            background: var(--border-color);
+            border: none;
+            color: var(--text-main);
+            cursor: pointer;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+
+        .record-actions button:hover { filter: brightness(1.2); }
+        .record-actions button.delete-btn:hover { background: var(--danger); color: white; }
+
+        .empty-list {
+            text-align: center;
+            color: var(--text-muted);
+            margin: 20px 0;
+            font-size: 1rem;
+        }
+
+        .timer-manager {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+
+        .form-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 12px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .form-control {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px;
+            border-radius: 6px;
+            outline: none;
+        }
+
+        .form-control:focus { border-color: var(--primary); }
+
+        .days-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .day-lbl {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .day-lbl input { display: none; }
+        .day-lbl input:checked + span { color: var(--primary); font-weight: bold; }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            transition: 0.2s;
+        }
+        
+        .btn-primary:hover { filter: brightness(1.1); }
+
+        .timer-item {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .timer-item.disabled { opacity: 0.6; }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--border-color);
+            transition: .4s;
+            border-radius: 20px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px; width: 14px;
+            left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .log-container {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .log-item {
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--border-color);
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+        .log-item:last-child { border-bottom: none; }
+        .log-time { color: var(--primary); font-family: monospace; font-size: 0.85rem; margin-right: 10px;}
+
+        .player-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--card-bg);
+            border-top: 1px solid var(--primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.5);
+            z-index: 1001;
+            flex-wrap: wrap;
+        }
+
+        .footer {
+            width: 100%;
+            background: var(--card-bg);
+            border-top: 1px solid var(--border-color);
+            padding: 25px 35px 20px 35px;
+            font-size: 0.9rem;
+            z-index: 999;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+            margin-top: auto; /* Gắn footer xuống cuối */
+        }
+
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 30px;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .footer-brand h3 {
+            color: var(--primary);
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .footer-brand p {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .footer-stats-box {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .footer-stat-item {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .footer-stat-item span {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .footer-socials {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .footer-socials a {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: 0.3s;
+            text-decoration: none;
+        }
+
+        .footer-socials a:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+            transform: translateY(-3px);
+        }
+        
+        .footer-socials a.yt:hover { background: #ff0000; border-color: #ff0000; }
+        .footer-socials a.fb:hover { background: #1877f2; border-color: #1877f2; }
+
+        .footer-bottom {
+            max-width: 1400px;
+            margin: 15px auto 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        /* Floating Actions Buttons */
+        .floating-actions {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 10000;
+        }
+
+        .fab-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-size: 1.1rem;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .fab-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .fab-btn.stop-all {
+            background: var(--danger);
+        }
+
+        /* Custom Alert Modals */
+        .custom-alert-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none; justify-content: center; align-items: center;
+            z-index: 10005;
+            backdrop-filter: blur(5px);
+        }
+        .custom-alert-overlay.show { display: flex; }
+        
+        .custom-alert-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 15px;
+            padding: 25px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            text-align: center;
+            color: var(--text-main);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .custom-alert-overlay.show .custom-alert-box { transform: scale(1); }
+        
+        .custom-alert-title { font-size: 1.3rem; font-weight: bold; margin-bottom: 15px; color: var(--primary); }
+        .custom-alert-msg { font-size: 1rem; margin-bottom: 25px; line-height: 1.5; color: var(--text-main); }
+        .custom-alert-btns { display: flex; gap: 10px; justify-content: center; }
+        
+        .custom-btn { padding: 10px 20px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 0.95rem; }
+        .custom-btn-primary { background: var(--primary); color: #fff; }
+        .custom-btn-secondary { background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-main); }
+        .custom-btn:hover { filter: brightness(1.1); }
+
+        @media (max-width: 1200px) {
+            .grid-container { grid-template-columns: repeat(3, 1fr); }
+            .timer-manager { grid-template-columns: 1fr; }
+            .footer-content { grid-template-columns: 1fr; gap: 20px; text-align: center; }
+            .footer-socials { justify-content: center; }
+            .footer-bottom { flex-direction: column; gap: 8px; text-align: center; }
+        }
+        @media (max-width: 900px) {
+            .grid-container { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 600px) {
+            .header { flex-direction: column; text-align: center; }
+            .search-box input { width: 100%; }
+            .grid-container { grid-template-columns: 1fr; }
+            .player-bar {
+                flex-direction: column;
+                padding: 10px;
+            }
+            .player-controls { flex-wrap: wrap; justify-content: center; }
+            .tab-content { padding-bottom: 150px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="header-left">
+            <h1><i class="fas fa-satellite-dish"></i> ĐÀI SÓNG</h1>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="search-input" placeholder="Tìm kiếm kênh...">
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="clock-display" id="clock-display">00:00:00</div>
+            <select class="theme-selector" id="theme-selector">
+                <option value="theme-dark">Tối</option>
+                <option value="theme-light">Sáng</option>
+                <option value="theme-neon">Neon</option>
+                <option value="theme-forest">Rừng Xanh</option>
+                <option value="theme-ocean">Đại Dương</option>
+                <option value="theme-sunset">Hoàng Hôn</option>
+            </select>
+        </div>
+    </header>
+    
+    <div class="active-count">Đang phát: <span id="active-streams">0</span>/3 kênh</div>
+
+    <div class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab('home')"><i class="fas fa-home"></i> Trang Chủ</button>
+        <button class="tab-btn" onclick="switchTab('recordings')"><i class="fas fa-folder-open"></i> Ghi Âm</button>
+        <button class="tab-btn" onclick="switchTab('timer')"><i class="fas fa-clock"></i> Hẹn Giờ</button>
+        <button class="tab-btn" onclick="switchTab('log')"><i class="fas fa-history"></i> Nhật Ký</button>
+    </div>
+
+    <div class="tab-content active" id="tab-home">
+        <h3 class="section-title"><i class="fas fa-broadcast-tower"></i> Kênh Trực Tuyến</h3>
+        <div class="grid-container" id="channel-grid"></div>
+    </div>
+
+    <div class="tab-content" id="tab-recordings">
+        <h3 class="section-title"><i class="fas fa-folder-open"></i> Quản Lý Ghi Âm</h3>
+        <div class="recordings-container" id="global-recordings-list">
+            <div class="empty-list">Chưa có file ghi âm nào.</div>
+        </div>
+    </div>
+
+    <div class="tab-content" id="tab-timer">
+        <h3 class="section-title"><i class="fas fa-stopwatch"></i> Quản Lý Hẹn Giờ</h3>
+        <div class="timer-manager">
+            <div class="form-card">
+                <h4 style="margin-bottom: 15px; color: var(--primary);" id="timer-form-title">Tạo Hẹn Giờ Mới</h4>
+                <input type="hidden" id="timer-id-edit">
+                
+                <div class="form-group">
+                    <label>Chọn Kênh</label>
+                    <select class="form-control" id="timer-channel"></select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Chức Năng</label>
+                    <select class="form-control" id="timer-action">
+                        <option value="play">Bật / Tắt Phát Kênh</option>
+                        <option value="record">Bật / Dừng Ghi Âm</option>
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="form-group">
+                        <label>Giờ Bắt Đầu</label>
+                        <input type="time" class="form-control" id="timer-start" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Giờ Kết Thúc</label>
+                        <input type="time" class="form-control" id="timer-end" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Lặp Lại (Bỏ trống = 1 lần)</label>
+                    <div class="days-selector">
+                        <label class="day-lbl"><input type="checkbox" class="timer-day" value="1"><span>T2</span></label>
+                        <label class="day-lbl"><input type="checkbox" class="timer-day" value="2"><span>T3</span></label>
+                        <label class="day-lbl"><input type="checkbox" class="timer-day" value="3"><span>T4</span></label>
+                        <label class="day-lbl"><input type="checkbox" class="timer-day" value="4"><span>T5</span></label>
+                        <label class="day-lbl"><input type="checkbox" class="timer-day" value="5"><span>T6</span></label>
+                        <label class="day-lbl"><input type="checkbox" class="timer-day" value="6"><span>T7</span></label>
+                        <label class="day-lbl"><input type="checkbox" class="timer-day" value="0"><span>CN</span></label>
+                    </div>
+                </div>
+
+                <button class="btn-primary" onclick="saveTimerForm()"><i class="fas fa-save"></i> Lưu Hẹn Giờ</button>
+                <button class="btn-primary" style="background: var(--border-color); margin-top: 10px; display: none;" id="btn-cancel-edit" onclick="resetTimerForm()">Hủy Bỏ</button>
+            </div>
+            
+            <div>
+                <div id="timers-list-container">
+                    <div class="empty-list">Chưa có lịch hẹn giờ nào.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-content" id="tab-log">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 class="section-title" style="margin: 0; border: none;"><i class="fas fa-clipboard-list"></i> Nhật Ký Hoạt Động</h3>
+            <button class="btn-primary" style="width: auto; background: var(--danger);" onclick="clearLogs()"><i class="fas fa-trash"></i> Xóa Tất Cả</button>
+        </div>
+        <div class="log-container" id="log-list"></div>
+    </div>
+
+    <div id="audio-player-bar" class="player-bar" style="display: none;">
+        <div class="player-info">
+            <span id="player-title">Tên kênh</span>
+        </div>
+        <div class="player-controls">
+            <button class="btn" id="player-play-btn"><i class="fas fa-play"></i></button>
+            <span class="player-time" id="player-time-current">00:00</span>
+            <input type="range" id="player-seek" min="0" max="100" value="0">
+            <span class="player-time" id="player-time-total">00:00</span>
+            <button class="btn" id="player-mute-btn"><i class="fas fa-volume-up"></i></button>
+            <input type="range" id="player-vol" min="0" max="1" step="0.05" value="1">
+            <button class="btn" id="player-close-btn" style="background: var(--danger); color: white;"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <h3><i class="fas fa-satellite-dish"></i> Đài Sóng Radio</h3>
+                <p>Nền tảng nghe đài phát thanh trực tuyến và ghi âm chương trình phát thanh hàng đầu. Kết nối thông tin, âm nhạc và nhịp sống muôn nơi.</p>
+            </div>
+            <div class="footer-stats-box">
+                <div class="footer-stat-item">Tổng số kênh: <span id="stat-total">0</span></div>
+                <div class="footer-stat-item">Bản ghi âm: <span id="stat-records">0</span></div>
+                <div class="footer-stat-item">Hẹn giờ: <span id="stat-timers">0</span></div>
+            </div>
+            <div class="footer-socials">
+                <a href="https://vov.vn" target="_blank" title="VOV - Đài Tiếng Nói VN"><i class="fas fa-globe"></i></a>
+                <a href="https://voh.com.vn" target="_blank" title="VOH - Đài Tiếng Nói NDTPHCM"><i class="fas fa-broadcast-tower"></i></a>
+                <a href="#" class="fb" title="Facebook"><i class="fab fa-facebook"></i></a>
+                <a href="#" class="yt" title="YouTube"><i class="fab fa-youtube"></i></a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Đài Sóng Radio. All rights reserved.</p>
+            <p>Phát triển bởi Web Radio System</p>
+        </div>
+    </footer>
+
+    <div class="floating-actions">
+        <button class="fab-btn stop-all" onclick="stopAllChannels()" title="Tắt tất cả kênh đang phát"><i class="fas fa-power-off"></i></button>
+        <button class="fab-btn" id="fab-scroll" onclick="toggleScroll()" title="Cuộn trang"><i class="fas fa-arrow-down"></i></button>
+    </div>
+
+    <div class="custom-alert-overlay" id="custom-alert-overlay">
+        <div class="custom-alert-box">
+            <div class="custom-alert-title" id="custom-alert-title">Thông báo</div>
+            <div class="custom-alert-msg" id="custom-alert-msg"></div>
+            <div class="custom-alert-btns">
+                <button class="custom-btn custom-btn-primary" id="custom-alert-ok">OK</button>
+                <button class="custom-btn custom-btn-secondary" id="custom-alert-cancel" style="display:none;">Hủy</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="custom-alert-overlay" id="quick-timer-modal">
+        <div class="custom-alert-box">
+            <div class="custom-alert-title">Hẹn Giờ Nhanh</div>
+            <div class="custom-alert-msg" style="text-align: left;">
+                <div style="margin-bottom: 15px;">
+                    <label style="display:block; margin-bottom: 5px; font-weight:bold; color:var(--text-muted)">Hành động:</label>
+                    <select id="qt-action" class="form-control" style="width: 100%">
+                        <option value="qt_play">Bật kênh</option>
+                        <option value="qt_stop">Tắt kênh</option>
+                        <option value="qt_record">Bắt đầu ghi âm</option>
+                        <option value="qt_stop_record">Dừng ghi âm</option>
+                        <option value="qt_mute">Tắt tiếng</option>
+                        <option value="qt_unmute">Bật tiếng</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; margin-bottom: 5px; font-weight:bold; color:var(--text-muted)">Thời gian (HH:MM):</label>
+                    <input type="time" id="qt-time" class="form-control" style="width: 100%" required>
+                </div>
+            </div>
+            <div class="custom-alert-btns">
+                <button class="custom-btn custom-btn-primary" onclick="confirmQuickTimer()">Lưu</button>
+                <button class="custom-btn custom-btn-secondary" onclick="closeQuickTimer()">Hủy</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Override System Alert and Confirm with Custom UI
+        window.showAlert = (msg) => {
+            document.getElementById('custom-alert-overlay').classList.add('show');
+            document.getElementById('custom-alert-title').innerText = 'Thông báo';
+            document.getElementById('custom-alert-msg').innerHTML = msg;
+            document.getElementById('custom-alert-cancel').style.display = 'none';
+            document.getElementById('custom-alert-ok').onclick = () => {
+                document.getElementById('custom-alert-overlay').classList.remove('show');
+            };
+        };
+        window.alert = window.showAlert;
+
+        window.showConfirm = (msg, callback) => {
+            document.getElementById('custom-alert-overlay').classList.add('show');
+            document.getElementById('custom-alert-title').innerText = 'Xác nhận';
+            document.getElementById('custom-alert-msg').innerHTML = msg;
+            document.getElementById('custom-alert-cancel').style.display = 'block';
+            
+            document.getElementById('custom-alert-ok').onclick = () => {
+                document.getElementById('custom-alert-overlay').classList.remove('show');
+                if(callback) callback();
+            };
+            document.getElementById('custom-alert-cancel').onclick = () => {
+                document.getElementById('custom-alert-overlay').classList.remove('show');
+            };
+        };
+
+        // Scroll Actions handling
+        window.addEventListener('scroll', () => {
+            const scrollBtn = document.getElementById('fab-scroll');
+            const icon = scrollBtn.querySelector('i');
+            if (window.scrollY > 100) {
+                icon.className = 'fas fa-arrow-up';
+            } else {
+                icon.className = 'fas fa-arrow-down';
+            }
+        });
+
+        window.toggleScroll = () => {
+            if (window.scrollY > 100) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }
+        };
+
+        window.stopAllChannels = () => {
+            if(activeStreams.size === 0) {
+                showAlert("Không có kênh nào đang bật!");
+                return;
+            }
+            showConfirm("Bạn có chắc muốn tắt tất cả các kênh đang phát?", () => {
+                channels.forEach(ch => {
+                    if(channelState[ch.id] && channelState[ch.id].isPlaying) {
+                        togglePlay(ch);
+                    }
+                });
+                showAlert("Đã tắt toàn bộ kênh.");
+            });
+        };
+
+        const channels = [
+            { id: 'vovgthn', name: 'VOV Giao Thông HN', url: 'https://audio-lss.vov.vn/live/giao_thong_ha_noi.m3u8', icon: 'fa-car' },
+            { id: 'vovgthcm', name: 'VOV GTHCM', url: 'https://play.vovgiaothong.vn/live/gthcm/playlist.m3u8', icon: 'fa-motorcycle' },
+            { id: 'vovmekong', name: 'VOV Mekong', url: 'https://play.vovgiaothong.vn/live/mekong/playlist.m3u8', icon: 'fa-water' },
+            { id: 'vovduyenhai', name: 'VOV Duyên Hải', url: 'https://tfz20geauymt1go41hpjofa3dyptpqbsgn6jqq3zzc35jcfzze4dxp3u1h7uq.100ycdn.com/play.vovgiaothong.vn/live/duyenhai2/playlist.m3u8?wsSession=cafc89016c95fee2304b9069-178866051122105&wsIPSercert=858f772fc1fcddb39d6e6e17830b849e&wsBindIP=2&wsserid=1172662689757036152', icon: 'fa-ship' },
+            { id: 'vov1', name: 'VOV1', url: 'https://str.vov.gov.vn/vovlive/vov1vov5Vietnamese.sdp_aac/chunklist_w1635058943.m3u8', icon: 'fa-newspaper' },
+            { id: 'vov2', name: 'VOV2', url: 'https://str.vov.gov.vn/vovlive/vov2.sdp_aac/chunklist_w610145337.m3u8', icon: 'fa-book' },
+            { id: 'vov3', name: 'VOV3', url: 'https://str.vov.gov.vn/vovlive/vov3.sdp_aac/chunklist_w765784949.m3u8', icon: 'fa-music' },
+            { id: 'vohmekong', name: 'VOH Mekong FM92.5', url: 'https://strm.voh.com.vn/radio/channel6/chunklist_w621496676.m3u8', icon: 'fa-broadcast-tower' },
+            { id: 'voh999', name: 'VOH FM99.9', url: 'https://strm.voh.com.vn/radio/channel3/chunklist_w1192659743.m3u8', icon: 'fa-broadcast-tower' },
+            { id: 'voh956', name: 'VOH FM95.6', url: 'https://strm.voh.com.vn/radio/channel1/chunklist_w2130794908.m3u8', icon: 'fa-broadcast-tower' },
+            { id: 'voh877', name: 'VOH FM87.7', url: 'https://strm.voh.com.vn/radio/channel5/chunklist_w901087032.m3u8', icon: 'fa-broadcast-tower' },
+            { id: 'voh610', name: 'VOH AM610', url: 'https://strm.voh.com.vn/radio/channel2/chunklist_w1503938461.m3u8', icon: 'fa-broadcast-tower' },
+            { id: 'hn96', name: 'Hà Nội 96', url: 'http://222.252.21.96:8000/HANOI96', icon: 'fa-city' },
+            { id: 'hn90', name: 'Hà Nội 90', url: 'http://14.162.146.90:8000/HANOI90', icon: 'fa-city' },
+            { id: 'vov5', name: 'VOV5', url: 'https://media-audio.vov.vn/vov5.sdp_aac/chunklist_w386674364.m3u8', icon: 'fa-globe' },
+            { id: 'vov247', name: 'VOV 24/7', url: 'https://audio-lss.vov.vn/han/live/vov24_7/audio/haudio-eng.m3u8', icon: 'fa-clock' }
+        ];
+
+        const MAX_STREAMS = 3;
+        let activeStreams = new Set();
+        let db;
+        const channelState = {};
+        let timers = [];
+
+        const initTheme = () => {
+            const savedTheme = localStorage.getItem('radio_theme') || 'theme-dark';
+            document.body.className = savedTheme;
+            document.getElementById('theme-selector').value = savedTheme;
+            document.getElementById('theme-selector').addEventListener('change', (e) => {
+                document.body.className = e.target.value;
+                localStorage.setItem('radio_theme', e.target.value);
+                addLog('Thay đổi giao diện sang: ' + e.target.options[e.target.selectedIndex].text);
+            });
+        };
+
+        setInterval(() => {
+            document.getElementById('clock-display').innerText = new Date().toLocaleTimeString('vi-VN');
+        }, 1000);
+
+        const addLog = (msg) => {
+            const logs = JSON.parse(localStorage.getItem('radio_logs') || '[]');
+            const timeStr = new Date().toLocaleString('vi-VN');
+            logs.unshift(`[${timeStr}] ${msg}`);
+            localStorage.setItem('radio_logs', JSON.stringify(logs));
+            renderLogs();
+        };
+
+        const renderLogs = () => {
+            const logs = JSON.parse(localStorage.getItem('radio_logs') || '[]');
+            const list = document.getElementById('log-list');
+            if(logs.length === 0) {
+                list.innerHTML = '<div class="empty-list">Nhật ký trống.</div>';
+                return;
+            }
+            list.innerHTML = logs.map(l => {
+                const parts = l.split('] ');
+                return `<div class="log-item"><span class="log-time">${parts[0]}]</span> ${parts[1]}</div>`;
+            }).join('');
+        };
+
+        window.clearLogs = () => {
+            showConfirm("Bạn có chắc muốn xóa toàn bộ nhật ký?", () => {
+                localStorage.removeItem('radio_logs');
+                renderLogs();
+                addLog("Đã xóa nhật ký");
+            });
+        };
+
+        const switchTab = (tabName) => {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            tabBtns.forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            
+            if(tabName === 'home') tabBtns[0].classList.add('active');
+            if(tabName === 'recordings') tabBtns[1].classList.add('active');
+            if(tabName === 'timer') {
+                tabBtns[2].classList.add('active');
+                renderTimers();
+            }
+            if(tabName === 'log') {
+                tabBtns[3].classList.add('active');
+                renderLogs();
+            }
+        };
+
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            document.querySelectorAll('.channel-card').forEach(card => {
+                const name = card.querySelector('.channel-name').innerText.toLowerCase();
+                card.style.display = name.includes(term) ? 'flex' : 'none';
+            });
+        });
+
+        const workerCode = `
+            let timer;
+            self.onmessage = function(e) {
+                if (e.data === 'start') {
+                    timer = setInterval(() => self.postMessage('tick'), 1000);
+                } else if (e.data === 'stop') {
+                    clearInterval(timer);
+                }
+            };
+        `;
+        const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
+        const workerUrl = URL.createObjectURL(workerBlob);
+
+        const initDB = () => {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open("RadioDB", 1);
+                request.onupgradeneeded = (e) => {
+                    db = e.target.result;
+                    if (!db.objectStoreNames.contains("recordings")) {
+                        const store = db.createObjectStore("recordings", { keyPath: "id", autoIncrement: true });
+                        store.createIndex("channelId", "channelId", { unique: false });
+                    }
+                };
+                request.onsuccess = (e) => {
+                    db = e.target.result;
+                    resolve();
+                };
+                request.onerror = (e) => reject(e);
+            });
+        };
+
+        const saveRecordToDB = (channelId, channelName, blob, duration) => {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(["recordings"], "readwrite");
+                const store = transaction.objectStore("recordings");
+                const record = { channelId, channelName, blob, duration, timestamp: new Date().getTime() };
+                const request = store.add(record);
+                request.onsuccess = (e) => resolve(e.target.result);
+                request.onerror = (e) => reject(e);
+            });
+        };
+
+        const getAllRecordsFromDB = () => {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(["recordings"], "readonly");
+                const store = transaction.objectStore("recordings");
+                const request = store.getAll();
+                request.onsuccess = (e) => resolve(e.target.result);
+                request.onerror = (e) => reject(e);
+            });
+        };
+
+        const deleteRecordFromDB = (id) => {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(["recordings"], "readwrite");
+                const store = transaction.objectStore("recordings");
+                const request = store.delete(id);
+                request.onsuccess = () => resolve();
+                request.onerror = (e) => reject(e);
+            });
+        };
+
+        const formatTime = (seconds) => {
+            if(isNaN(seconds)) return "00:00";
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        };
+
+        const renderChannels = () => {
+            const grid = document.getElementById('channel-grid');
+            const chSelect = document.getElementById('timer-channel');
+            grid.innerHTML = '';
+            chSelect.innerHTML = '';
+
+            document.getElementById('stat-total').innerText = channels.length;
+
+            channels.forEach(ch => {
+                const opt = document.createElement('option');
+                opt.value = ch.id;
+                opt.innerText = ch.name;
+                chSelect.appendChild(opt);
+
+                channelState[ch.id] = {
+                    audio: new Audio(),
+                    hls: null,
+                    isPlaying: false,
+                    isMuted: false,
+                    isRecording: false,
+                    recorder: null,
+                    chunks: [],
+                    worker: new Worker(workerUrl),
+                    recSeconds: 0,
+                    audioCtx: null,
+                    destNode: null,
+                    gainNode: null
+                };
+                
+                channelState[ch.id].audio.crossOrigin = "anonymous";
+
+                const card = document.createElement('div');
+                card.className = 'channel-card';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="channel-icon"><i class="fas ${ch.icon}"></i></div>
+                        <div class="channel-name" title="${ch.name}">${ch.name}</div>
+                        <button class="btn" title="Hẹn giờ nhanh" onclick="openQuickTimer('${ch.id}')" style="width: 30px; height: 30px; font-size: 0.9rem;"><i class="fas fa-clock"></i></button>
+                    </div>
+                    <div class="controls">
+                        <button class="btn play-btn" id="play-${ch.id}"><i class="fas fa-play"></i></button>
+                        <button class="btn mute-btn" id="mute-${ch.id}"><i class="fas fa-volume-up"></i></button>
+                        <input type="range" id="vol-${ch.id}" min="0" max="1" step="0.05" value="1">
+                    </div>
+                    <div class="record-section">
+                        <button class="record-btn" id="rec-btn-${ch.id}" disabled><i class="fas fa-circle"></i> <span>Ghi âm</span></button>
+                        <span id="rec-time-${ch.id}">00:00</span>
+                    </div>
+                `;
+                grid.appendChild(card);
+
+                document.getElementById(`play-${ch.id}`).addEventListener('click', () => togglePlay(ch));
+                document.getElementById(`mute-${ch.id}`).addEventListener('click', () => toggleMute(ch));
+                document.getElementById(`vol-${ch.id}`).addEventListener('input', (e) => {
+                    const vol = parseFloat(e.target.value);
+                    channelState[ch.id].audio.volume = vol;
+                    if (channelState[ch.id].gainNode) {
+                        channelState[ch.id].gainNode.gain.value = channelState[ch.id].isMuted ? 0 : vol;
+                    }
+                    updateMuteIcon(ch.id, vol == 0);
+                });
+                document.getElementById(`rec-btn-${ch.id}`).addEventListener('click', () => toggleRecord(ch));
+            });
+        };
+
+        const togglePlay = (ch) => {
+            const state = channelState[ch.id];
+            const btn = document.getElementById(`play-${ch.id}`);
+            const recBtn = document.getElementById(`rec-btn-${ch.id}`);
+
+            if (state.isPlaying) {
+                if(state.isRecording) stopRecord(ch);
+                state.audio.pause();
+                if(state.hls) state.hls.destroy();
+                state.isPlaying = false;
+                activeStreams.delete(ch.id);
+                btn.classList.remove('active-play');
+                btn.innerHTML = '<i class="fas fa-play"></i>';
+                recBtn.disabled = true;
+                addLog(`Đã dừng phát kênh: ${ch.name}`);
+            } else {
+                if (activeStreams.size >= MAX_STREAMS) {
+                    showAlert(`Bạn chỉ được phát tối đa ${MAX_STREAMS} kênh cùng lúc!`);
+                    addLog(`Cảnh báo: Đã đạt giới hạn phát ${MAX_STREAMS} kênh. Không thể phát thêm ${ch.name}.`);
+                    return false;
+                }
+
+                if (!state.audioCtx) {
+                    try {
+                        const AudioContext = window.AudioContext || window.webkitAudioContext;
+                        state.audioCtx = new AudioContext();
+                        const source = state.audioCtx.createMediaElementSource(state.audio);
+                        state.destNode = state.audioCtx.createMediaStreamDestination();
+                        state.gainNode = state.audioCtx.createGain();
+                        
+                        source.connect(state.destNode);
+                        source.connect(state.gainNode);
+                        state.gainNode.connect(state.audioCtx.destination);
+                        
+                        state.gainNode.gain.value = state.isMuted ? 0 : state.audio.volume;
+                    } catch(e) { console.error("AudioContext init error:", e); }
+                }
+                if (state.audioCtx && state.audioCtx.state === 'suspended') {
+                    state.audioCtx.resume();
+                }
+
+                if ('mediaSession' in navigator) {
+                    navigator.mediaSession.metadata = new MediaMetadata({ title: ch.name, artist: 'Đài Sóng Radio' });
+                }
+                
+                if (ch.url.includes('.m3u8') && Hls.isSupported()) {
+                    state.hls = new Hls();
+                    state.hls.loadSource(ch.url);
+                    state.hls.attachMedia(state.audio);
+                    state.hls.on(Hls.Events.MANIFEST_PARSED, () => state.audio.play());
+                } else {
+                    state.audio.src = ch.url;
+                    state.audio.play();
+                }
+
+                state.isPlaying = true;
+                activeStreams.add(ch.id);
+                btn.classList.add('active-play');
+                btn.innerHTML = '<i class="fas fa-stop"></i>';
+                recBtn.disabled = false;
+                addLog(`Đã bắt đầu phát kênh: ${ch.name}`);
+            }
+            document.getElementById('active-streams').innerText = activeStreams.size;
+            return true;
+        };
+
+        const toggleMute = (ch) => {
+            const state = channelState[ch.id];
+            state.isMuted = !state.isMuted;
+            state.audio.muted = state.isMuted;
+            if (state.gainNode) state.gainNode.gain.value = state.isMuted ? 0 : state.audio.volume;
+            updateMuteIcon(ch.id, state.isMuted);
+        };
+
+        const updateMuteIcon = (id, muted) => {
+            const btn = document.getElementById(`mute-${id}`);
+            btn.innerHTML = muted || channelState[id].audio.volume == 0 ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+        };
+
+        const toggleRecord = (ch) => {
+            if (channelState[ch.id].isRecording) stopRecord(ch);
+            else startRecord(ch);
+        };
+
+        const startRecord = (ch) => {
+            const state = channelState[ch.id];
+            const btn = document.getElementById(`rec-btn-${ch.id}`);
+
+            if (!state.isPlaying) {
+                showAlert("Kênh chưa bật, không thể ghi âm!");
+                return false;
+            }
+
+            try {
+                let stream;
+                if (state.destNode && state.destNode.stream && state.destNode.stream.getAudioTracks().length > 0) {
+                    stream = state.destNode.stream;
+                } else {
+                    stream = state.audio.captureStream ? state.audio.captureStream() : state.audio.mozCaptureStream();
+                }
+                
+                if (!stream || stream.getAudioTracks().length === 0) {
+                    showAlert("Trình duyệt không hỗ trợ capture luồng audio chéo tên miền cho kênh này.");
+                    return false;
+                }
+                
+                state.chunks = [];
+                state.recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                
+                state.recorder.ondataavailable = e => { 
+                    if (e.data.size > 0) {
+                        state.chunks.push(e.data);
+                        const tempBlob = new Blob(state.chunks, { type: 'audio/webm' });
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            localStorage.setItem(`temp_rec_${ch.id}`, reader.result);
+                            localStorage.setItem(`temp_rec_dur_${ch.id}`, state.recSeconds);
+                            localStorage.setItem(`temp_rec_name_${ch.id}`, ch.name);
+                        };
+                        reader.readAsDataURL(tempBlob);
+                    }
+                };
+                
+                state.recorder.onstop = async () => {
+                    const blob = new Blob(state.chunks, { type: 'audio/webm' });
+                    await saveRecordToDB(ch.id, ch.name, blob, state.recSeconds);
+                    localStorage.removeItem(`temp_rec_${ch.id}`);
+                    localStorage.removeItem(`temp_rec_dur_${ch.id}`);
+                    localStorage.removeItem(`temp_rec_name_${ch.id}`);
+                    loadGlobalRecordingsUI();
+                    addLog(`Đã lưu bản ghi âm: ${ch.name} (${formatTime(state.recSeconds)})`);
+                };
+
+                state.recorder.start(1000); 
+                state.isRecording = true;
+                state.recSeconds = 0;
+                btn.classList.add('recording');
+                btn.querySelector('span').innerText = 'Dừng ghi';
+                
+                state.worker.onmessage = () => {
+                    state.recSeconds++;
+                    document.getElementById(`rec-time-${ch.id}`).innerText = formatTime(state.recSeconds);
+                    localStorage.setItem(`temp_rec_dur_${ch.id}`, state.recSeconds);
+                };
+                state.worker.postMessage('start');
+                addLog(`Đã bắt đầu ghi âm: ${ch.name}`);
+                return true;
+            } catch (e) {
+                console.error(e);
+                showAlert("Lỗi ghi âm (thường do CORS).");
+                return false;
+            }
+        };
+
+        const stopRecord = (ch) => {
+            const state = channelState[ch.id];
+            const btn = document.getElementById(`rec-btn-${ch.id}`);
+
+            if(state.recorder && state.recorder.state !== "inactive") state.recorder.stop();
+            state.worker.postMessage('stop');
+            state.isRecording = false;
+            btn.classList.remove('recording');
+            btn.querySelector('span').innerText = 'Ghi âm';
+            document.getElementById(`rec-time-${ch.id}`).innerText = "00:00";
+            addLog(`Đã kết thúc ghi âm: ${ch.name}`);
+        };
+
+        const loadGlobalRecordingsUI = async () => {
+            const listEl = document.getElementById('global-recordings-list');
+            listEl.innerHTML = '';
+            const records = await getAllRecordsFromDB();
+            
+            document.getElementById('stat-records').innerText = records.length;
+
+            if(records.length === 0) {
+                listEl.innerHTML = '<div class="empty-list">Chưa có file ghi âm nào.</div>';
+                return;
+            }
+
+            records.sort((a, b) => b.timestamp - a.timestamp);
+            records.forEach(rec => {
+                const div = document.createElement('div');
+                div.className = 'record-item-global';
+                const date = new Date(rec.timestamp).toLocaleString('vi-VN');
+                div.innerHTML = `
+                    <div class="record-info">
+                        <span class="record-channel-tag">${rec.channelName}</span>
+                        <span><i class="fas fa-file-audio"></i> ${date} <b>(${formatTime(rec.duration)})</b></span>
+                    </div>
+                    <div class="record-actions">
+                        <button title="Nghe lại" onclick="playRecord('${rec.id}')"><i class="fas fa-play"></i></button>
+                        <button title="Tải xuống mp3" onclick="downloadRecord('${rec.id}')"><i class="fas fa-download"></i></button>
+                        <button class="delete-btn" title="Xóa" onclick="deleteRecord('${rec.id}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+                listEl.appendChild(div);
+            });
+        };
+
+        const loadTimers = () => {
+            timers = JSON.parse(localStorage.getItem('radio_timers') || '[]');
+            document.getElementById('stat-timers').innerText = timers.length;
+        };
+
+        let activeQuickTimerChId = null;
+
+        window.openQuickTimer = (chId) => {
+            activeQuickTimerChId = chId;
+            const state = channelState[chId];
+            
+            if (state.isRecording) document.getElementById('qt-action').value = 'qt_stop_record';
+            else if (state.isPlaying) document.getElementById('qt-action').value = 'qt_stop';
+            else document.getElementById('qt-action').value = 'qt_play';
+            
+            const now = new Date();
+            document.getElementById('qt-time').value = now.getHours().toString().padStart(2,'0') + ':' + (now.getMinutes() + 1).toString().padStart(2,'0');
+
+            document.getElementById('quick-timer-modal').classList.add('show');
+        };
+
+        window.closeQuickTimer = () => {
+            document.getElementById('quick-timer-modal').classList.remove('show');
+        };
+
+        window.confirmQuickTimer = () => {
+            const timeStr = document.getElementById('qt-time').value;
+            const actionVal = document.getElementById('qt-action').value;
+            const actionText = document.getElementById('qt-action').options[document.getElementById('qt-action').selectedIndex].text;
+            
+            if(!timeStr) {
+                showAlert("Vui lòng chọn thời gian hợp lệ!");
+                return;
+            }
+
+            const ch = channels.find(c => c.id === activeQuickTimerChId);
+            const newTimer = {
+                id: Date.now().toString(),
+                channelId: activeQuickTimerChId,
+                action: actionVal,
+                start: timeStr, 
+                end: "",
+                days: [],
+                enabled: true
+            };
+            timers.push(newTimer);
+            localStorage.setItem('radio_timers', JSON.stringify(timers));
+            loadTimers();
+            renderTimers();
+            addLog(`Hẹn giờ nhanh: ${actionText} kênh ${ch.name} lúc ${timeStr}`);
+            
+            closeQuickTimer();
+            showAlert(`Đã đặt hẹn giờ: ${actionText} lúc ${timeStr}.`);
+        };
+
+
+        window.saveTimerForm = () => {
+            const id = document.getElementById('timer-id-edit').value;
+            const channelId = document.getElementById('timer-channel').value;
+            const action = document.getElementById('timer-action').value;
+            const start = document.getElementById('timer-start').value;
+            const end = document.getElementById('timer-end').value;
+            
+            if(!start || !end) { showAlert("Vui lòng nhập đủ giờ bắt đầu và kết thúc!"); return; }
+            if(start >= end) { showAlert("Cảnh báo: Giờ bắt đầu phải trước giờ kết thúc trong ngày!"); return; }
+
+            let overlapCount = 0;
+            timers.forEach(t => {
+                if(t.enabled && t.id !== id && (t.action === 'play' || t.action === 'record')) {
+                    if((t.start <= start && t.end > start) || (t.start < end && t.end >= end) || (t.start >= start && t.end <= end)) {
+                        overlapCount++;
+                    }
+                }
+            });
+            if(overlapCount >= 3) {
+                showAlert("Không thể đặt hẹn giờ: Đã có từ 3 lịch hẹn giờ trùng khung giờ này!");
+                return;
+            }
+
+            const dayInputs = document.querySelectorAll('.timer-day:checked');
+            const days = Array.from(dayInputs).map(i => parseInt(i.value));
+
+            const timerObj = {
+                id: id || Date.now().toString(),
+                channelId, action, start, end, days, enabled: true
+            };
+
+            if(id) {
+                const idx = timers.findIndex(t => t.id === id);
+                if(idx >= 0) timers[idx] = timerObj;
+                addLog(`Đã cập nhật hẹn giờ cho kênh ${channels.find(c=>c.id==channelId).name}`);
+            } else {
+                timers.push(timerObj);
+                addLog(`Đã thêm mới hẹn giờ cho kênh ${channels.find(c=>c.id==channelId).name}`);
+            }
+
+            localStorage.setItem('radio_timers', JSON.stringify(timers));
+            loadTimers();
+            renderTimers();
+            resetTimerForm();
+        };
+
+        const renderTimers = () => {
+            const c = document.getElementById('timers-list-container');
+            if(timers.length === 0) {
+                c.innerHTML = '<div class="empty-list">Chưa có lịch hẹn giờ nào.</div>';
+                return;
+            }
+            
+            const dayNames = {0:'CN', 1:'T2', 2:'T3', 3:'T4', 4:'T5', 5:'T6', 6:'T7'};
+            
+            const actionMap = {
+                'play': 'Phát/Tắt kênh',
+                'record': 'Ghi âm',
+                'qt_play': 'Bật kênh (1 lần)',
+                'qt_stop': 'Tắt kênh (1 lần)',
+                'qt_record': 'Bắt đầu ghi âm (1 lần)',
+                'qt_stop_record': 'Dừng ghi âm (1 lần)',
+                'qt_mute': 'Tắt tiếng (1 lần)',
+                'qt_unmute': 'Bật tiếng (1 lần)'
+            };
+
+            c.innerHTML = timers.map(t => {
+                const ch = channels.find(x => x.id === t.channelId);
+                const chName = ch ? ch.name : 'Unknown';
+                const actionName = actionMap[t.action] || t.action;
+                const dayStr = t.days.length === 0 ? 'Chỉ 1 lần' : t.days.map(d => dayNames[d]).join(', ');
+                const timeLabel = t.action.startsWith('qt_') ? t.start : `${t.start} ➝ ${t.end}`;
+
+                return `
+                <div class="timer-item ${t.enabled ? '' : 'disabled'}">
+                    <div>
+                        <strong style="color: var(--primary)">${chName}</strong> - <span>${actionName}</span><br>
+                        <span style="font-size: 0.85rem; color: var(--text-muted)">
+                            <i class="far fa-clock"></i> ${timeLabel} | <i class="fas fa-calendar-alt"></i> ${dayStr}
+                        </span>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label class="switch">
+                            <input type="checkbox" ${t.enabled ? 'checked' : ''} onchange="toggleTimerState('${t.id}')">
+                            <span class="slider"></span>
+                        </label>
+                        ${!t.action.startsWith('qt_') ? `<button class="btn" onclick="editTimer('${t.id}')" style="width: 30px; height: 30px;"><i class="fas fa-edit"></i></button>` : ''}
+                        <button class="btn delete-btn" onclick="deleteTimer('${t.id}')" style="width: 30px; height: 30px; background:var(--danger); color:white;"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        };
+
+        window.toggleTimerState = (id) => {
+            const t = timers.find(x => x.id === id);
+            if(t) {
+                t.enabled = !t.enabled;
+                localStorage.setItem('radio_timers', JSON.stringify(timers));
+                renderTimers();
+                addLog(`Đã ${t.enabled ? 'bật' : 'tắt'} lịch hẹn giờ`);
+            }
+        };
+
+        window.editTimer = (id) => {
+            const t = timers.find(x => x.id === id);
+            if(t && !t.action.startsWith('qt_')) {
+                document.getElementById('timer-id-edit').value = t.id;
+                document.getElementById('timer-channel').value = t.channelId;
+                document.getElementById('timer-action').value = t.action;
+                document.getElementById('timer-start').value = t.start;
+                document.getElementById('timer-end').value = t.end;
+                
+                document.querySelectorAll('.timer-day').forEach(el => el.checked = false);
+                t.days.forEach(d => {
+                    const cb = document.querySelector(`.timer-day[value="${d}"]`);
+                    if(cb) cb.checked = true;
+                });
+                
+                document.getElementById('timer-form-title').innerText = "Cập Nhật Hẹn Giờ";
+                document.getElementById('btn-cancel-edit').style.display = "inline-block";
+                window.scrollTo(0,0);
+            }
+        };
+
+        window.deleteTimer = (id) => {
+            showConfirm("Xóa lịch hẹn giờ này?", () => {
+                timers = timers.filter(x => x.id !== id);
+                localStorage.setItem('radio_timers', JSON.stringify(timers));
+                loadTimers();
+                renderTimers();
+                addLog("Đã xóa 1 lịch hẹn giờ");
+            });
+        };
+
+        window.resetTimerForm = () => {
+            document.getElementById('timer-id-edit').value = '';
+            document.getElementById('timer-start').value = '';
+            document.getElementById('timer-end').value = '';
+            document.querySelectorAll('.timer-day').forEach(el => el.checked = false);
+            document.getElementById('timer-form-title').innerText = "Tạo Hẹn Giờ Mới";
+            document.getElementById('btn-cancel-edit').style.display = "none";
+        };
+
+        setInterval(() => {
+            const now = new Date();
+            if(now.getSeconds() !== 0) return;
+            
+            const hm = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+            const currentDay = now.getDay();
+
+            let shouldSave = false;
+            
+            timers.forEach(t => {
+                if(!t.enabled) return;
+                
+                const matchesDay = t.days.length === 0 || t.days.includes(currentDay);
+                if(!matchesDay) return;
+
+                const ch = channels.find(c => c.id === t.channelId);
+                if(!ch) return;
+                const state = channelState[t.channelId];
+
+                if(t.start === hm) {
+                    if (t.action === 'play' && !state.isPlaying) {
+                        const success = togglePlay(ch);
+                        if(success) addLog(`[Hẹn giờ] Bắt đầu phát: ${ch.name}`);
+                    }
+                    if (t.action === 'record' && !state.isRecording) {
+                        if(!state.isPlaying) togglePlay(ch);
+                        const success = startRecord(ch);
+                        if(success) addLog(`[Hẹn giờ] Bắt đầu ghi âm: ${ch.name}`);
+                    }
+
+                    if (t.action === 'qt_play' && !state.isPlaying) { togglePlay(ch); addLog(`[Hẹn giờ nhanh] Bắt đầu phát: ${ch.name}`); }
+                    if (t.action === 'qt_stop' && state.isPlaying) { togglePlay(ch); addLog(`[Hẹn giờ nhanh] Tắt kênh: ${ch.name}`); }
+                    if (t.action === 'qt_record' && !state.isRecording) { 
+                        if(!state.isPlaying) togglePlay(ch);
+                        startRecord(ch); 
+                        addLog(`[Hẹn giờ nhanh] Bắt đầu ghi âm: ${ch.name}`);
+                    }
+                    if (t.action === 'qt_stop_record' && state.isRecording) { stopRecord(ch); addLog(`[Hẹn giờ nhanh] Dừng ghi âm: ${ch.name}`); }
+                    if (t.action === 'qt_mute' && !state.isMuted) { toggleMute(ch); addLog(`[Hẹn giờ nhanh] Tắt tiếng: ${ch.name}`); }
+                    if (t.action === 'qt_unmute' && state.isMuted) { toggleMute(ch); addLog(`[Hẹn giờ nhanh] Bật tiếng: ${ch.name}`); }
+
+                    if (t.action.startsWith('qt_')) {
+                        t.enabled = false;
+                        shouldSave = true;
+                    }
+                }
+
+                if(t.end === hm) {
+                    if (t.action === 'play' && state.isPlaying) {
+                        togglePlay(ch);
+                        addLog(`[Hẹn giờ] Tắt phát: ${ch.name}`);
+                    }
+                    if (t.action === 'record' && state.isRecording) {
+                        stopRecord(ch);
+                        addLog(`[Hẹn giờ] Dừng ghi âm: ${ch.name}`);
+                    }
+
+                    if(t.days.length === 0) {
+                        t.enabled = false;
+                        shouldSave = true;
+                    }
+                }
+            });
+
+            if(shouldSave) {
+                localStorage.setItem('radio_timers', JSON.stringify(timers));
+                if(document.getElementById('tab-timer').classList.contains('active')) renderTimers();
+            }
+        }, 1000);
+
+        const globalAudioPlayer = new Audio();
+        const playerBar = document.getElementById('audio-player-bar');
+        const playerPlayBtn = document.getElementById('player-play-btn');
+        const playerMuteBtn = document.getElementById('player-mute-btn');
+        const playerSeek = document.getElementById('player-seek');
+        const playerVol = document.getElementById('player-vol');
+        const playerTimeCurrent = document.getElementById('player-time-current');
+        const playerTimeTotal = document.getElementById('player-time-total');
+        const playerTitle = document.getElementById('player-title');
+        const playerCloseBtn = document.getElementById('player-close-btn');
+        let isGlobalPlayerDragging = false;
+        
+        window.playRecord = async (id) => {
+            const transaction = db.transaction(["recordings"], "readonly");
+            const store = transaction.objectStore("recordings");
+            const request = store.get(Number(id));
+            request.onsuccess = (e) => {
+                const record = e.target.result;
+                if(globalAudioPlayer.src) URL.revokeObjectURL(globalAudioPlayer.src);
+                const url = URL.createObjectURL(record.blob);
+                globalAudioPlayer.src = url;
+                globalAudioPlayer.play();
+                
+                playerBar.style.display = 'flex';
+                playerTitle.innerText = `${record.channelName}`;
+                playerPlayBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                playerSeek.value = 0;
+                addLog(`Nghe lại file ghi âm: ${record.channelName}`);
+            };
+        };
+
+        globalAudioPlayer.addEventListener('timeupdate', () => {
+            if (!isGlobalPlayerDragging && !isNaN(globalAudioPlayer.duration)) {
+                playerSeek.value = (globalAudioPlayer.currentTime / globalAudioPlayer.duration) * 100;
+                playerTimeCurrent.innerText = formatTime(globalAudioPlayer.currentTime);
+                playerTimeTotal.innerText = formatTime(globalAudioPlayer.duration);
+            }
+        });
+
+        globalAudioPlayer.addEventListener('loadedmetadata', () => {
+            playerTimeTotal.innerText = formatTime(globalAudioPlayer.duration);
+        });
+
+        globalAudioPlayer.addEventListener('ended', () => {
+            playerPlayBtn.innerHTML = '<i class="fas fa-play"></i>';
+            playerSeek.value = 0;
+            playerTimeCurrent.innerText = "00:00";
+        });
+
+        playerPlayBtn.addEventListener('click', () => {
+            if (globalAudioPlayer.paused) { globalAudioPlayer.play(); playerPlayBtn.innerHTML = '<i class="fas fa-pause"></i>'; } 
+            else { globalAudioPlayer.pause(); playerPlayBtn.innerHTML = '<i class="fas fa-play"></i>'; }
+        });
+
+        playerSeek.addEventListener('input', (e) => {
+            isGlobalPlayerDragging = true;
+            if (!isNaN(globalAudioPlayer.duration)) playerTimeCurrent.innerText = formatTime((e.target.value / 100) * globalAudioPlayer.duration);
+        });
+
+        playerSeek.addEventListener('change', (e) => {
+            if (!isNaN(globalAudioPlayer.duration)) globalAudioPlayer.currentTime = (e.target.value / 100) * globalAudioPlayer.duration;
+            isGlobalPlayerDragging = false;
+        });
+
+        playerMuteBtn.addEventListener('click', () => {
+            globalAudioPlayer.muted = !globalAudioPlayer.muted;
+            if (globalAudioPlayer.muted) playerVol.value = 0;
+            else { playerVol.value = globalAudioPlayer.volume > 0 ? globalAudioPlayer.volume : 1; globalAudioPlayer.volume = playerVol.value; }
+            playerMuteBtn.innerHTML = globalAudioPlayer.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+        });
+
+        playerVol.addEventListener('input', (e) => {
+            globalAudioPlayer.volume = e.target.value;
+            globalAudioPlayer.muted = (e.target.value == 0);
+            playerMuteBtn.innerHTML = globalAudioPlayer.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+        });
+
+        playerCloseBtn.addEventListener('click', () => {
+            globalAudioPlayer.pause();
+            if(globalAudioPlayer.src) URL.revokeObjectURL(globalAudioPlayer.src);
+            globalAudioPlayer.src = "";
+            playerBar.style.display = 'none';
+        });
+
+        window.downloadRecord = async (id) => {
+            const transaction = db.transaction(["recordings"], "readonly");
+            const store = transaction.objectStore("recordings");
+            const request = store.get(Number(id));
+            request.onsuccess = (e) => {
+                const record = e.target.result;
+                const url = URL.createObjectURL(record.blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `Record_${record.channelId}_${new Date(record.timestamp).getTime()}.mp3`;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 100);
+                addLog(`Tải xuống file ghi âm: ${record.channelName}`);
+            };
+        };
+
+        window.deleteRecord = async (id) => {
+            showConfirm("Bạn có chắc muốn xóa bản ghi này?", async () => {
+                await deleteRecordFromDB(Number(id));
+                loadGlobalRecordingsUI();
+                addLog("Đã xóa 1 file ghi âm");
+            });
+        };
+
+        window.onload = async () => {
+            initTheme();
+            renderLogs();
+            loadTimers();
+            await initDB();
+            renderChannels();
+            loadGlobalRecordingsUI();
+
+            channels.forEach(ch => {
+                const tempData = localStorage.getItem(`temp_rec_${ch.id}`);
+                const tempDur = localStorage.getItem(`temp_rec_dur_${ch.id}`);
+                const tempName = localStorage.getItem(`temp_rec_name_${ch.id}`);
+                if (tempData) {
+                    fetch(tempData)
+                        .then(res => res.blob())
+                        .then(async (blob) => {
+                            await saveRecordToDB(ch.id, tempName || ch.name, blob, parseInt(tempDur) || 0);
+                            localStorage.removeItem(`temp_rec_${ch.id}`);
+                            localStorage.removeItem(`temp_rec_dur_${ch.id}`);
+                            localStorage.removeItem(`temp_rec_name_${ch.id}`);
+                            loadGlobalRecordingsUI();
+                            addLog(`Đã khôi phục và lưu bản ghi âm bị gián đoạn do F5/mất mạng: ${ch.name}`);
+                        }).catch(err => console.error("Khôi phục bản ghi thất bại:", err));
+                }
+            });
+        };
+    </script>
+</body>
+</html>
