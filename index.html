@@ -559,6 +559,7 @@
         .log-item:last-child { border-bottom: none; }
         .log-time { color: var(--primary); font-family: monospace; font-size: 0.85rem; margin-right: 10px;}
 
+        /* Updated Audio Player Bar styles */
         .player-bar {
             position: fixed;
             bottom: 0;
@@ -566,15 +567,55 @@
             right: 0;
             background: var(--card-bg);
             border-top: 1px solid var(--primary);
-            border-bottom: 1px solid var(--border-color);
             padding: 12px 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 15px;
-            box-shadow: 0 -4px 10px rgba(0,0,0,0.5);
+            gap: 20px;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.3);
             z-index: 1001;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+        }
+
+        .player-info {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--primary);
+            padding: 6px 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .player-controls {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .player-time {
+            font-weight: 500;
+            font-size: 0.9rem;
+            min-width: 45px;
+            text-align: center;
+            color: var(--text-main);
+        }
+
+        #player-seek {
+            flex: 1;
+            margin: 0 10px;
+            min-width: 100px;
+        }
+
+        #player-vol {
+            width: 80px;
+            flex-shrink: 0;
         }
 
         .footer {
@@ -585,7 +626,7 @@
             font-size: 0.9rem;
             z-index: 999;
             box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
-            margin-top: auto; /* Gắn footer xuống cuối */
+            margin-top: auto; 
         }
 
         .footer-content {
@@ -679,7 +720,7 @@
         /* Floating Actions Buttons */
         .floating-actions {
             position: fixed;
-            bottom: 30px;
+            bottom: 80px; /* Adjusted to not overlap with player bar */
             right: 30px;
             display: flex;
             flex-direction: column;
@@ -759,11 +800,26 @@
             .header { flex-direction: column; text-align: center; }
             .search-box input { width: 100%; }
             .grid-container { grid-template-columns: 1fr; }
+            
             .player-bar {
                 flex-direction: column;
-                padding: 10px;
+                padding: 15px 10px;
+                gap: 12px;
             }
-            .player-controls { flex-wrap: wrap; justify-content: center; }
+            .player-info {
+                max-width: 100%;
+            }
+            .player-controls { 
+                flex-wrap: wrap; 
+                justify-content: center; 
+                width: 100%; 
+            }
+            #player-seek {
+                width: 100%;
+                flex: none;
+                margin: 5px 0;
+            }
+            
             .tab-content { padding-bottom: 150px; }
         }
     </style>
@@ -877,9 +933,7 @@
     </div>
 
     <div id="audio-player-bar" class="player-bar" style="display: none;">
-        <div class="player-info">
-            <span id="player-title">Tên kênh</span>
-        </div>
+        <div class="player-info" id="player-title">Tên kênh</div>
         <div class="player-controls">
             <button class="btn" id="player-play-btn"><i class="fas fa-play"></i></button>
             <span class="player-time" id="player-time-current">00:00</span>
@@ -891,6 +945,7 @@
         </div>
     </div>
 
+    <!-- Footer -->
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-brand">
@@ -915,11 +970,13 @@
         </div>
     </footer>
 
+    <!-- Floating Actions Buttons -->
     <div class="floating-actions">
         <button class="fab-btn stop-all" onclick="stopAllChannels()" title="Tắt tất cả kênh đang phát"><i class="fas fa-power-off"></i></button>
         <button class="fab-btn" id="fab-scroll" onclick="toggleScroll()" title="Cuộn trang"><i class="fas fa-arrow-down"></i></button>
     </div>
 
+    <!-- Custom Modals -->
     <div class="custom-alert-overlay" id="custom-alert-overlay">
         <div class="custom-alert-box">
             <div class="custom-alert-title" id="custom-alert-title">Thông báo</div>
