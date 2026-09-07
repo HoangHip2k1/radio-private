@@ -2138,6 +2138,47 @@
                 }
             });
         };
+if ('mediaSession' in navigator) {
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: 'Tiêu đề Media',
+    artist: 'Tên nghệ sĩ',
+    album: 'Tên Album',
+    artwork: [
+      { src: 'https://via.placeholder.com/96', sizes: '96x96', type: 'image/png' },
+      { src: 'https://via.placeholder.com/128', sizes: '128x128', type: 'image/png' },
+      { src: 'https://via.placeholder.com/256', sizes: '256x256', type: 'image/png' },
+      { src: 'https://via.placeholder.com/512', sizes: '512x512', type: 'image/png' }
+    ]
+  });
+
+  navigator.mediaSession.setActionHandler('play', () => {
+    // Gọi lệnh/hàm Play của bạn ở đây
+  });
+
+  navigator.mediaSession.setActionHandler('pause', () => {
+    // Gọi lệnh/hàm Pause của bạn ở đây
+  });
+
+  navigator.mediaSession.setActionHandler('previoustrack', () => {
+    // Gọi lệnh/hàm chuyển bài trước của bạn ở đây
+  });
+
+  navigator.mediaSession.setActionHandler('nexttrack', () => {
+    // Gọi lệnh/hàm chuyển bài tiếp theo của bạn ở đây
+  });
+
+  navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+    // Gọi lệnh/hàm tua lại (vd: lùi 10s) của bạn ở đây
+  });
+
+  navigator.mediaSession.setActionHandler('seekforward', (details) => {
+    // Gọi lệnh/hàm tua tới (vd: tiến 10s) của bạn ở đây
+  });
+
+  navigator.mediaSession.setActionHandler('seekto', (details) => {
+    // Gọi lệnh/hàm tua đến một thời gian cụ thể của bạn ở đây
+  });
+}
     </script>
 </body>
 </html>
