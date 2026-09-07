@@ -5,13 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Radio Live & Record - Đài Sóng</title>
     
-    <!-- Bổ sung Favicon mới -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📻</text></svg>">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     
-    <!-- Thư viện JSZip để nén file -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     
     <style>
@@ -1055,6 +1053,84 @@
     </div>
 
     <script>
+        // --- BỔ SUNG CHỨC NĂNG CHỐNG NGỦ (WAKE LOCK) VÀ PHỤC HỒI KẾT NỐI ---
+        let wakeLock = null;
+        
+        const requestWakeLock = async () => {
+            try {
+                if ('wakeLock' in navigator && wakeLock === null) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                }
+            } catch (err) {
+                console.error('Wake Lock error:', err);
+            }
+        };
+
+        const releaseWakeLock = async () => {
+            if (wakeLock !== null) {
+                await wakeLock.release();
+                wakeLock = null;
+            }
+        };
+
+        const updateWakeLockState = () => {
+            if (activeStreams.size > 0) {
+                requestWakeLock();
+            } else {
+                releaseWakeLock();
+            }
+        };
+
+        // Khôi phục Wake Lock nếu tab bị ẩn rồi mở lại
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && activeStreams.size > 0) {
+                wakeLock = null; // Reset để request lại
+                requestWakeLock();
+            }
+        });
+
+        // Phục hồi stream nếu bị mất mạng hoặc máy tính ngủ dậy
+        window.addEventListener('online', () => {
+            channels.forEach(ch => {
+                const state = channelState[ch.id];
+                if (state && state.isPlaying) {
+                    if (state.hls) {
+                        state.hls.startLoad(-1);
+                    } else {
+                        state.audio.load();
+                        state.audio.play().catch(e => console.error("Auto-resume failed:", e));
+                    }
+                }
+            });
+        });
+
+        // Ngăn chặn tắt/F5 nhầm trang nếu đang có ghi âm chạy
+        window.addEventListener('beforeunload', (e) => {
+            let isRecording = false;
+            for(let id in channelState) {
+                if(channelState[id] && channelState[id].isRecording) { 
+                    isRecording = true; break; 
+                }
+            }
+            if(isRecording) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        // Ngăn chặn các lỗi không bắt được (unhandled) làm sập script khi đang ngủ
+        window.addEventListener('error', (e) => {
+            if(e.message.includes('play() failed') || e.message.includes('network')) {
+                e.preventDefault();
+            }
+        });
+        window.addEventListener('unhandledrejection', (e) => {
+            if(e.reason && (e.reason.name === 'NotAllowedError' || e.reason.name === 'NotSupportedError')) {
+                e.preventDefault();
+            }
+        });
+        // ---------------------------------------------------------------------
+
         window.showAlert = (msg) => {
             document.getElementById('custom-alert-overlay').classList.add('show');
             document.getElementById('custom-alert-title').innerText = 'Thông báo';
@@ -1110,6 +1186,7 @@
                         togglePlay(ch);
                     }
                 });
+                updateWakeLockState(); // Cập nhật Wake Lock
                 showAlert("Đã tắt toàn bộ kênh.");
             });
         };
@@ -1204,14 +1281,6 @@
                 renderLogs();
             }
         };
-
-        document.getElementById('search-input').addEventListener('input', (e) => {
-            const term = e.target.value.toLowerCase();
-            document.querySelectorAll('.channel-card').forEach(card => {
-                const name = card.querySelector('.channel-name').innerText.toLowerCase();
-                card.style.display = name.includes(term) ? 'flex' : 'none';
-            });
-        });
 
         const workerCode = `
             let timer;
@@ -1312,6 +1381,23 @@
                 };
                 
                 channelState[ch.id].audio.crossOrigin = "anonymous";
+                
+                // Tự phục hồi lỗi Audio
+                channelState[ch.id].audio.addEventListener('error', () => {
+                    const st = channelState[ch.id];
+                    if(st.isPlaying) {
+                        setTimeout(() => {
+                            if(st.isPlaying) {
+                                if(st.hls) {
+                                    st.hls.recoverMediaError();
+                                } else {
+                                    st.audio.load();
+                                    st.audio.play().catch(() => {});
+                                }
+                            }
+                        }, 5000); // Thử lại sau 5s nếu lỗi
+                    }
+                });
 
                 const card = document.createElement('div');
                 card.className = 'channel-card';
@@ -1396,10 +1482,10 @@
                     state.hls = new Hls();
                     state.hls.loadSource(ch.url);
                     state.hls.attachMedia(state.audio);
-                    state.hls.on(Hls.Events.MANIFEST_PARSED, () => state.audio.play());
+                    state.hls.on(Hls.Events.MANIFEST_PARSED, () => state.audio.play().catch(e => console.error("Play prevented", e)));
                 } else {
                     state.audio.src = ch.url;
-                    state.audio.play();
+                    state.audio.play().catch(e => console.error("Play prevented", e));
                 }
 
                 state.isPlaying = true;
@@ -1409,7 +1495,9 @@
                 recBtn.disabled = false;
                 addLog(`Đã bắt đầu phát kênh: ${ch.name}`);
             }
+            
             document.getElementById('active-streams').innerText = activeStreams.size;
+            updateWakeLockState(); // Cập nhật trạng thái Wake Lock
             return true;
         };
 
