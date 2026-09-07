@@ -1232,9 +1232,11 @@
         }, 1000);
 
         const addLog = (msg) => {
-            const logs = JSON.parse(localStorage.getItem('radio_logs') || '[]');
+            let logs = JSON.parse(localStorage.getItem('radio_logs') || '[]');
             const timeStr = new Date().toLocaleString('vi-VN');
             logs.unshift(`[${timeStr}] ${msg}`);
+            // Giới hạn 500 dòng log để tránh phình to bộ nhớ localStorage
+            if (logs.length > 500) logs = logs.slice(0, 500);
             localStorage.setItem('radio_logs', JSON.stringify(logs));
             renderLogs();
         };
@@ -1441,7 +1443,10 @@
             if (state.isPlaying) {
                 if(state.isRecording) stopRecord(ch);
                 state.audio.pause();
-                if(state.hls) state.hls.destroy();
+                if(state.hls) {
+                    state.hls.destroy();
+                    state.hls = null;
+                }
                 state.isPlaying = false;
                 activeStreams.delete(ch.id);
                 btn.classList.remove('active-play');
@@ -1547,14 +1552,6 @@
                 state.recorder.ondataavailable = e => { 
                     if (e.data.size > 0) {
                         state.chunks.push(e.data);
-                        const tempBlob = new Blob(state.chunks, { type: 'audio/webm' });
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                            localStorage.setItem(`temp_rec_${ch.id}`, reader.result);
-                            localStorage.setItem(`temp_rec_dur_${ch.id}`, state.recSeconds);
-                            localStorage.setItem(`temp_rec_name_${ch.id}`, ch.name);
-                        };
-                        reader.readAsDataURL(tempBlob);
                     }
                 };
                 
@@ -1577,7 +1574,6 @@
                 state.worker.onmessage = () => {
                     state.recSeconds++;
                     document.getElementById(`rec-time-${ch.id}`).innerText = formatTime(state.recSeconds);
-                    localStorage.setItem(`temp_rec_dur_${ch.id}`, state.recSeconds);
                 };
                 state.worker.postMessage('start');
                 addLog(`Đã bắt đầu ghi âm: ${ch.name}`);
