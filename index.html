@@ -180,12 +180,7 @@
         }
 
         .active-count {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            text-align: center;
-            width: 100%;
-            background: var(--card-bg);
-            padding-bottom: 10px;
+            display: none;
         }
 
         .tab-nav {
@@ -193,8 +188,8 @@
             justify-content: center;
             background: var(--card-bg);
             border-bottom: 1px solid var(--border-color);
-            padding: 0 15px 15px 15px;
-            gap: 10px;
+            padding: 15px;
+            gap: 15px;
             flex-wrap: wrap;
         }
 
@@ -600,19 +595,15 @@
 
         /* Updated Audio Player Bar styles */
         .player-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
             background: var(--card-bg);
-            border-top: 1px solid var(--primary);
+            border: 1px solid var(--primary);
+            border-radius: 8px;
             padding: 12px 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 20px;
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.3);
-            z-index: 1001;
+            margin-bottom: 15px;
             flex-wrap: nowrap;
         }
 
@@ -901,6 +892,19 @@
             <button class="btn-primary" style="width:auto; padding:8px 15px; background:var(--danger);" onclick="deleteAllRecords()"><i class="fas fa-trash"></i> Xóa tất cả</button>
         </div>
 
+        <div id="audio-player-bar" class="player-bar" style="display: none;">
+            <div class="player-info-bar" id="player-title">Tên kênh</div>
+            <div class="player-controls">
+                <button class="btn" id="player-play-btn"><i class="fas fa-play"></i></button>
+                <span class="player-time" id="player-time-current">00:00</span>
+                <input type="range" id="player-seek" min="0" max="100" value="0">
+                <span class="player-time" id="player-time-total">00:00</span>
+                <button class="btn" id="player-mute-btn"><i class="fas fa-volume-up"></i></button>
+                <input type="range" id="player-vol" min="0" max="1" step="0.05" value="1">
+                <button class="btn" id="player-close-btn" style="background: var(--danger); color: white;"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+
         <div class="recordings-container" id="global-recordings-list">
             <div class="empty-list">Chưa có file ghi âm nào.</div>
         </div>
@@ -969,19 +973,6 @@
             <button class="btn-primary" style="width: auto; background: var(--danger);" onclick="clearLogs()"><i class="fas fa-trash"></i> Xóa Tất Cả</button>
         </div>
         <div class="log-container" id="log-list"></div>
-    </div>
-
-    <div id="audio-player-bar" class="player-bar" style="display: none;">
-        <div class="player-info-bar" id="player-title">Tên kênh</div>
-        <div class="player-controls">
-            <button class="btn" id="player-play-btn"><i class="fas fa-play"></i></button>
-            <span class="player-time" id="player-time-current">00:00</span>
-            <input type="range" id="player-seek" min="0" max="100" value="0">
-            <span class="player-time" id="player-time-total">00:00</span>
-            <button class="btn" id="player-mute-btn"><i class="fas fa-volume-up"></i></button>
-            <input type="range" id="player-vol" min="0" max="1" step="0.05" value="1">
-            <button class="btn" id="player-close-btn" style="background: var(--danger); color: white;"><i class="fas fa-times"></i></button>
-        </div>
     </div>
 
     <footer class="footer">
@@ -1347,7 +1338,7 @@
         };
 
         const formatTime = (seconds) => {
-            if(isNaN(seconds)) return "00:00";
+            if(isNaN(seconds) || !isFinite(seconds)) return "00:00";
             const m = Math.floor(seconds / 60).toString().padStart(2, '0');
             const s = Math.floor(seconds % 60).toString().padStart(2, '0');
             return `${m}:${s}`;
@@ -1473,6 +1464,7 @@
                         state.gainNode.connect(state.audioCtx.destination);
                         
                         state.gainNode.gain.value = state.isMuted ? 0 : state.audio.volume;
+                        state.audio.muted = false;
                     } catch(e) { console.error("AudioContext init error:", e); }
                 }
                 if (state.audioCtx && state.audioCtx.state === 'suspended') {
@@ -1509,8 +1501,12 @@
         const toggleMute = (ch) => {
             const state = channelState[ch.id];
             state.isMuted = !state.isMuted;
-            state.audio.muted = state.isMuted;
-            if (state.gainNode) state.gainNode.gain.value = state.isMuted ? 0 : state.audio.volume;
+            if (state.audioCtx) {
+                if (state.gainNode) state.gainNode.gain.value = state.isMuted ? 0 : state.audio.volume;
+                state.audio.muted = false;
+            } else {
+                state.audio.muted = state.isMuted;
+            }
             updateMuteIcon(ch.id, state.isMuted);
         };
 
@@ -2016,26 +2012,30 @@
                 if(globalAudioPlayer.src) URL.revokeObjectURL(globalAudioPlayer.src);
                 const url = URL.createObjectURL(record.blob);
                 globalAudioPlayer.src = url;
+                globalAudioPlayer.recordedDuration = record.duration;
                 globalAudioPlayer.play();
                 
                 playerBar.style.display = 'flex';
                 playerTitle.innerText = `${record.channelName}`;
                 playerPlayBtn.innerHTML = '<i class="fas fa-pause"></i>';
                 playerSeek.value = 0;
+                playerTimeTotal.innerText = formatTime(record.duration);
                 addLog(`Nghe lại file ghi âm: ${record.channelName}`);
             };
         };
 
         globalAudioPlayer.addEventListener('timeupdate', () => {
-            if (!isGlobalPlayerDragging && !isNaN(globalAudioPlayer.duration)) {
-                playerSeek.value = (globalAudioPlayer.currentTime / globalAudioPlayer.duration) * 100;
+            const dur = globalAudioPlayer.duration === Infinity ? globalAudioPlayer.recordedDuration : globalAudioPlayer.duration;
+            if (!isGlobalPlayerDragging && !isNaN(dur)) {
+                playerSeek.value = (globalAudioPlayer.currentTime / dur) * 100;
                 playerTimeCurrent.innerText = formatTime(globalAudioPlayer.currentTime);
-                playerTimeTotal.innerText = formatTime(globalAudioPlayer.duration);
+                playerTimeTotal.innerText = formatTime(dur);
             }
         });
 
         globalAudioPlayer.addEventListener('loadedmetadata', () => {
-            playerTimeTotal.innerText = formatTime(globalAudioPlayer.duration);
+            const dur = globalAudioPlayer.duration === Infinity ? globalAudioPlayer.recordedDuration : globalAudioPlayer.duration;
+            playerTimeTotal.innerText = formatTime(dur);
         });
 
         globalAudioPlayer.addEventListener('ended', () => {
@@ -2051,11 +2051,13 @@
 
         playerSeek.addEventListener('input', (e) => {
             isGlobalPlayerDragging = true;
-            if (!isNaN(globalAudioPlayer.duration)) playerTimeCurrent.innerText = formatTime((e.target.value / 100) * globalAudioPlayer.duration);
+            const dur = globalAudioPlayer.duration === Infinity ? globalAudioPlayer.recordedDuration : globalAudioPlayer.duration;
+            if (!isNaN(dur)) playerTimeCurrent.innerText = formatTime((e.target.value / 100) * dur);
         });
 
         playerSeek.addEventListener('change', (e) => {
-            if (!isNaN(globalAudioPlayer.duration)) globalAudioPlayer.currentTime = (e.target.value / 100) * globalAudioPlayer.duration;
+            const dur = globalAudioPlayer.duration === Infinity ? globalAudioPlayer.recordedDuration : globalAudioPlayer.duration;
+            if (!isNaN(dur)) globalAudioPlayer.currentTime = (e.target.value / 100) * dur;
             isGlobalPlayerDragging = false;
         });
 
